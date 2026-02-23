@@ -1756,7 +1756,6 @@ function processLogQueue() {
 function showFlashProgressComplete(successCount, failCount) {
     const progressCard = document.querySelector('.flash-progress-card');
     const completeSection = document.getElementById('flash-progress-complete');
-    const completeIcon = document.getElementById('complete-icon');
     const completeTitle = document.getElementById('complete-title');
     const completeSummary = document.getElementById('complete-summary');
 
@@ -1765,14 +1764,11 @@ function showFlashProgressComplete(successCount, failCount) {
         progressCard.style.display = 'none';
     }
 
+    // 设置标题和状态
     if (failCount > 0) {
-        completeIcon.classList.add('error');
-        completeIcon.textContent = '✗';
         completeTitle.textContent = '刷入失败';
         completeTitle.style.color = '#ff6b9d';
     } else {
-        completeIcon.classList.remove('error');
-        completeIcon.textContent = '✓';
         completeTitle.textContent = '刷入成功';
         completeTitle.style.color = 'var(--text-primary)';
     }
