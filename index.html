@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WEB 小米线刷工具</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="blur-bg"></div>
+
+    <!-- 首次加载动画 -->
+    <div class="loading-screen" id="loading-screen">
+        <div class="hyperos-loading">
+            <!-- 背景光晕 -->
+            <div class="hyperos-glow"></div>
+
+            <!-- 中心圆环 -->
+            <div class="hyperos-ring">
+                <div class="ring-inner">
+                    <div class="ring-core"></div>
+                </div>
+            </div>
+
+            <!-- 装饰粒子 -->
+            <div class="particle particle-1"></div>
+            <div class="particle particle-2"></div>
+            <div class="particle particle-3"></div>
+            <div class="particle particle-4"></div>
+
+            <!-- Logo -->
+            <div class="hyperos-logo">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none">
+                    <defs>
+                        <linearGradient id="miGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#ff6b9d"/>
+                            <stop offset="100%" stop-color="#667eea"/>
+                        </linearGradient>
+                    </defs>
+                    <rect x="5" y="3" width="14" height="18" rx="2" fill="url(#miGradient)" opacity="0.9"/>
+                    <rect x="7" y="5" width="10" height="14" rx="1" fill="rgba(255,255,255,0.2)"/>
+                    <circle cx="12" cy="17.5" r="1.5" fill="rgba(255,255,255,0.4)"/>
+                </svg>
+            </div>
+
+            <!-- 文字 -->
+            <div class="hyperos-title">HyperOS Flash Tool</div>
+            <div class="hyperos-subtitle">WEB 小米线刷工具</div>
+        </div>
+    </div>
+    
+    <!-- 提示信息弹窗 -->
+    <div class="toast toast-info" id="info-toast" style="display: none;">
+        <div class="toast-content">
+            <div class="toast-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                <span>提示信息</span>
+            </div>
+            <div class="toast-body">
+                <p>• 操作日志请按 <kbd>F12</kbd> 查看控制台</p>
+                <p>• 需要 Chrome/Edge 浏览器支持</p>
+                <p>• 请确保 Android 设备已启用 USB 调试</p>
+            </div>
+            <button class="toast-close" id="info-toast-close">知道了</button>
+        </div>
+    </div>
+
+    <!-- 版本信息弹窗 -->
+    <div class="modal-overlay" id="version-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#versionModalGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="versionModalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#667eea"/>
+                            <stop offset="100%" style="stop-color:#764ba2"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="modal-content">
+                <h2 class="modal-title">WEB 小米线刷工具</h2>
+                <div class="version-info">
+                    <div class="version-row">
+                        <span class="version-label">版本:</span>
+                        <span class="version-value" id="app-version">v1.0.0</span>
+                    </div>
+                    <div class="version-row">
+                        <span class="version-label">更新日期:</span>
+                        <span class="version-value" id="app-update-date">2025-02-24</span>
+                    </div>
+                    <div class="version-row">
+                        <span class="version-label">作者:</span>
+                        <span class="version-value">Luoxue</span>
+                    </div>
+                </div>
+                <div class="changelog">
+                    <h3 class="changelog-title">更新日志</h3>
+                    <ul class="changelog-list">
+                        <li>支持 ADB 和 Fastboot 设备自动检测</li>
+                        <li>支持线刷包刷写功能</li>
+                        <li>支持多种刷入模式</li>
+                        <li>详细的进度和日志显示</li>
+                        <li>WebUSB 提供支持</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" id="version-modal-close">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 刷入提示弹窗 -->
+    <div class="modal-overlay" id="flash-hint-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#hintModalGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="hintModalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#ffa726"/>
+                            <stop offset="100%" style="stop-color:#fb8c00"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="modal-content">
+                <h2 class="modal-title">刷入提示</h2>
+                <p class="modal-text" id="flash-hint-text">提示内容</p>
+                <div class="modal-buttons">
+                    <button class="modal-btn modal-btn-primary" id="flash-hint-confirm">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 线刷包选择提示弹窗 -->
+    <div class="modal-overlay" id="flash-select-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#flashModalGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="flashModalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#667eea"/>
+                            <stop offset="100%" style="stop-color:#764ba2"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="modal-content">
+                <h2 class="modal-title">选择线刷包</h2>
+                <p class="modal-text">请选择小米官方线刷包文件夹</p>
+                <div class="modal-buttons">
+                    <button class="modal-btn modal-btn-secondary" id="flash-select-cancel">取消</button>
+                    <button class="modal-btn modal-btn-primary" id="flash-select-confirm">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 刷入确认弹窗 -->
+    <div class="modal-overlay" id="flash-confirm-modal">
+        <div class="modal flash-confirm-modal">
+            <div class="modal-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#flashConfirmGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="flashConfirmGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#ff6b9d"/>
+                            <stop offset="100%" style="stop-color:#c44569"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="modal-content">
+                <h2 class="modal-title">确认开始刷入</h2>
+                
+                <!-- 刷机信息卡片 -->
+                <div class="flash-info-grid">
+                    <div class="flash-info-item">
+                        <div class="flash-info-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2a10 10 0 0 0-10 10 10 10 0 0 0 10 10 10 10 0 0 0 10-10 10 10 0 0 0-10-10zm0 18a8 8 0 0 1-8-8 8 8 0 0 1 8-8 8 8 0 0 1 8 8 8 8 0 0 1-8 8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </div>
+                        <div class="flash-info-details">
+                            <div class="flash-info-label">设备型号</div>
+                            <div class="flash-info-value" id="mi-confirm-device">-</div>
+                        </div>
+                    </div>
+                    <div class="flash-info-item">
+                        <div class="flash-info-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </div>
+                        <div class="flash-info-details">
+                            <div class="flash-info-label">刷入模式</div>
+                            <div class="flash-info-value mode-tag" id="mi-confirm-mode">-</div>
+                        </div>
+                    </div>
+                    <div class="flash-info-item">
+                        <div class="flash-info-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z"/>
+                                <path d="M9 12h6"/>
+                                <path d="M12 9v6"/>
+                            </svg>
+                        </div>
+                        <div class="flash-info-details">
+                            <div class="flash-info-label">镜像数量</div>
+                            <div class="flash-info-value" id="mi-confirm-count">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 警告提示 -->
+                <div class="flash-warning-box">
+                    <div class="flash-warning-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/>
+                        </svg>
+                        <span>刷入前检查清单</span>
+                    </div>
+                    <div class="flash-warning-list">
+                        <div class="flash-warning-item">
+                            <div class="check-circle">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <span>设备电量充足（建议超过 50%）</span>
+                        </div>
+                        <div class="flash-warning-item">
+                            <div class="check-circle">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <span>已备份重要数据</span>
+                        </div>
+                        <div class="flash-warning-item">
+                            <div class="check-circle">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <span>使用原装或优质 USB 线</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 状态指示 -->
+                <div class="flash-confirm-status" id="mi-modal-status" style="display: none;">
+                    <div class="status-indicator">
+                        <div class="status-spinner"></div>
+                        <span class="status-text">正在尝试 ADB 重启到 Fastboot...</span>
+                    </div>
+                </div>
+
+                <div class="modal-buttons">
+                    <button class="modal-btn modal-btn-secondary" id="mi-flash-cancel">取消</button>
+                    <button class="modal-btn modal-btn-primary" id="mi-flash-continue">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        <span>开始刷入</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 授权提示弹窗 -->
+    <div class="modal-overlay" id="auth-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="url(#modalGradient)" stroke-width="2"/>
+                    <path d="M12 16V12" stroke="url(#modalGradient)" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="12" cy="8" r="1" fill="url(#modalGradient)"/>
+                    <defs>
+                        <linearGradient id="modalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#ff6b9d"/>
+                            <stop offset="100%" style="stop-color:#c44569"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="modal-content">
+                <h2 class="modal-title">需要授权</h2>
+                <p class="modal-text">请在您的 Android 设备上确认授权此电脑进行 ADB 连接</p>
+                <div class="modal-tips">
+                    <div class="tip-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="16" x2="12" y2="12"/>
+                            <line x1="12" y1="8" x2="12.01" y2="8"/>
+                        </svg>
+                        <span>请查看您的手机屏幕</span>
+                    </div>
+                    <div class="tip-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="16" x2="12" y2="12"/>
+                            <line x1="12" y1="8" x2="12.01" y2="8"/>
+                        </svg>
+                        <span>点击"允许"或"确定"按钮</span>
+                    </div>
+                    <div class="tip-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="16" x2="12" y2="12"/>
+                            <line x1="12" y1="8" x2="12.01" y2="8"/>
+                        </svg>
+                        <span>如提示"允许 USB 调试"请勾选"始终允许"</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 顶部标题区 -->
+        <header>
+            <div class="header-content">
+                <div class="app-info">
+                    <div class="app-icon" id="app-logo" style="cursor: pointer;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                            <path d="M17 1.01L7 1C5.9 1 5 1.9 5 3v18c0 1.1 0.9 2 2 2h10c1.1 0 2-0.9 2-2V3C19 1.9 18.1 1.01 17 1.01Z" fill="url(#gradient1)" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+                            <circle cx="12" cy="17" r="1.5" fill="rgba(255,255,255,0.9)"/>
+                            <rect x="9" cy="4" width="6" height="8" rx="2" fill="rgba(255,255,255,0.3)"/>
+                            <defs>
+                                <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#ff6b9d"/>
+                                    <stop offset="100%" style="stop-color:#c44569"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <div class="app-title-group">
+                        <h1 class="app-title" id="app-title">WEB 小米线刷工具</h1>
+                        <p class="app-subtitle">WebUSB - Adb/Fastboot</p>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="back-btn" id="header-back-btn" style="display: none;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="19" y1="12" x2="5" y2="12"/>
+                            <polyline points="12 19 5 12 12 5"/>
+                        </svg>
+                        <span>返回</span>
+                    </button>
+                    <div class="status-badge" id="status-badge">
+                        <span class="status-dot"></span>
+                        <span class="status-text">未连接</span>
+                    </div>
+                    <button class="info-btn" id="info-btn" title="提示信息">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="16" x2="12" y2="12"/>
+                            <line x1="12" y1="8" x2="12.01" y2="8"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main>
+            <!-- 主界面：控制面板 + 设备信息 -->
+            <div class="main-grid" id="main-grid">
+                <!-- 左侧：控制面板 -->
+                <div class="control-panel">
+                    <!-- 连接控制 -->
+                    <div class="panel-section">
+                        <h2 class="section-title">设备连接</h2>
+                        <div class="button-row">
+                            <button id="connect-btn" class="hyper-btn btn-primary">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                </svg>
+                                <span>连接设备</span>
+                            </button>
+                            <button id="disconnect-btn" class="hyper-btn btn-secondary" disabled>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 11H8v-2h8v2z"/>
+                                </svg>
+                                <span>断开连接</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 设备操作 -->
+                    <div class="panel-section">
+                        <h2 class="section-title">设备操作</h2>
+                        <div class="button-grid">
+                            <button id="reboot-btn" class="hyper-btn btn-action" disabled>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="23 4 23 10 17 10"/>
+                                    <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+                                </svg>
+                                <span>重启设备</span>
+                            </button>
+                            <button id="reboot-fastboot-btn" class="hyper-btn btn-action" disabled>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                                </svg>
+                                <span>Fastboot</span>
+                            </button>
+                            <button id="reboot-recovery-btn" class="hyper-btn btn-action" disabled>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+                                </svg>
+                                <span>Recovery</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 线刷功能 -->
+                    <div class="panel-section">
+                        <h2 class="section-title">线刷工具</h2>
+                        <button id="flash-mode-btn" class="hyper-btn btn-primary">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                            </svg>
+                            <span>刷入线刷包</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 右侧：设备信息 -->
+                <div class="info-panel">
+                    <div class="glass-card device-card" id="device-card">
+                        <div class="card-header">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="5" y="2" width="14" height="20" rx="2"/>
+                                <line x1="12" y1="18" x2="12.01" y2="18"/>
+                            </svg>
+                            <span>设备信息</span>
+                        </div>
+                        <div class="device-details" id="device-details">
+                            <div class="device-placeholder">
+                                <div class="phone-icon">
+                                    <svg width="100" height="170" viewBox="0 0 100 170">
+                                        <!-- 定义渐变 -->
+                                        <defs>
+                                            <linearGradient id="phoneBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" stop-color="#1a1a2e"/>
+                                                <stop offset="100%" stop-color="#16213e"/>
+                                            </linearGradient>
+                                            <linearGradient id="phoneScreenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" stop-color="#0f3460"/>
+                                                <stop offset="50%" stop-color="#1a1a3e"/>
+                                                <stop offset="100%" stop-color="#16213e"/>
+                                            </linearGradient>
+                                            <linearGradient id="phoneBorderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" stop-color="#ff6b9d"/>
+                                                <stop offset="100%" stop-color="#667eea"/>
+                                            </linearGradient>
+                                            <radialGradient id="screenGlow" cx="50%" cy="30%" r="50%">
+                                                <stop offset="0%" stop-color="rgba(255,107,157,0.15)"/>
+                                                <stop offset="100%" stop-color="transparent"/>
+                                            </radialGradient>
+                                        </defs>
+
+                                        <!-- 手机主体 - 全面屏设计 -->
+                                        <rect x="8" y="5" width="84" height="160" rx="18" fill="url(#phoneBodyGrad)" stroke="url(#phoneBorderGrad)" stroke-width="1.5"/>
+
+                                        <!-- 侧边按钮 -->
+                                        <rect x="92" y="40" width="2.5" height="22" rx="1.25" fill="rgba(255,255,255,0.12)"/>
+                                        <rect x="92" y="67" width="2.5" height="18" rx="1.25" fill="rgba(255,255,255,0.1)"/>
+                                        <rect x="5.5" y="82" width="2.5" height="18" rx="1.25" fill="rgba(255,255,255,0.1)"/>
+
+                                        <!-- 全面屏幕 -->
+                                        <rect x="12" y="10" width="76" height="140" rx="14" fill="url(#phoneScreenGrad)"/>
+                                        <!-- 屏幕光晕 -->
+                                        <rect x="12" y="10" width="76" height="140" rx="14" fill="url(#screenGlow)"/>
+
+                                        <!-- 屏幕内边框 -->
+                                        <rect x="14" y="12" width="72" height="136" rx="12" stroke="rgba(255,255,255,0.06)" stroke-width="0.5" fill="none"/>
+
+                                        <!-- 顶部前置摄像头挖孔 -->
+                                        <circle cx="50" cy="20" r="4" fill="rgba(0,0,0,0.6)" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>
+                                        <circle cx="50" cy="20" r="2.5" fill="rgba(50,50,70,0.8)"/>
+                                        <circle cx="49.2" cy="19.2" r="0.8" fill="rgba(255,255,255,0.2)"/>
+
+                                        <!-- 屏幕内容 - 时间 -->
+                                        <text x="50" y="50" text-anchor="middle" font-size="20" fill="rgba(255,255,255,0.9)" font-weight="700" font-family="Arial, sans-serif">12:30</text>
+                                        <text x="50" y="62" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.5)" font-family="Arial, sans-serif">2月24日 周二</text>
+
+                                        <!-- 小米Logo -->
+                                        <rect x="35" y="80" width="30" height="12" rx="3" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.1)" stroke-width="0.8"/>
+                                        <text x="50" y="90" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.35)" font-weight="600" font-family="Arial, sans-serif">mi</text>
+
+                                        <!-- 屏幕内容卡片 -->
+                                        <rect x="18" y="105" width="64" height="28" rx="6" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+                                        <rect x="24" y="113" width="20" height="4" rx="1" fill="rgba(255,255,255,0.15)"/>
+                                        <rect x="24" y="121" width="30" height="3" rx="1" fill="rgba(255,255,255,0.1)"/>
+
+                                        <!-- 底部手势条 -->
+                                        <rect x="40" y="142" width="20" height="3" rx="1.5" fill="rgba(255,255,255,0.2)"/>
+
+                                        <!-- USB连接线 -->
+                                        <path d="M 50 165 L 50 180" stroke="url(#phoneBorderGrad)" stroke-width="1.5" stroke-dasharray="3,3" stroke-linecap="round"/>
+                                        <path d="M 42 176 L 50 183 L 58 176" fill="none" stroke="url(#phoneBorderGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <p>暂无连接设备</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 线刷界面（默认隐藏） -->
+            <div class="flash-container" id="flash-container" style="display: none;">
+                <div class="flash-main-content">
+                    <!-- 镜像文件卡片 -->
+                    <div class="glass-card flash-images-card" id="flash-images-card">
+                        <div class="card-header-enhanced">
+                            <div class="header-icon-bg">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                    <polyline points="10 9 9 9 8 9"/>
+                                </svg>
+                            </div>
+                            <div class="header-text">
+                                <span class="title">镜像文件</span>
+                                <span class="subtitle" id="flash-image-count">0 个文件</span>
+                            </div>
+                        </div>
+                        <div class="image-list" id="flash-image-list">
+                            <div class="empty-state">
+                                <div class="empty-icon">
+                                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                </div>
+                                <p>请选择包含 images 文件夹的线刷包目录</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 刷机包信息卡片 -->
+                    <div class="glass-card flash-info-card" id="flash-info-card">
+                        <div class="card-header-enhanced">
+                            <div class="header-icon-bg">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="12" y1="16" x2="12" y2="12"/>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                                </svg>
+                            </div>
+                            <div class="header-text">
+                                <span class="title">刷机包信息</span>
+                                <span class="subtitle">详细版本信息</span>
+                            </div>
+                        </div>
+                        <div class="flash-info-content" id="flash-info-content">
+                            <div class="empty-state">
+                                <div class="empty-icon">
+                                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <line x1="12" y1="16" x2="12" y2="12"/>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                                    </svg>
+                                </div>
+                                <p>暂无刷机包信息</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 操作卡片 -->
+                    <div class="glass-card flash-action-card" id="flash-action-card">
+                        <div class="card-header-enhanced">
+                            <div class="header-icon-bg">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                                </svg>
+                            </div>
+                            <div class="header-text">
+                                <span class="title">刷入操作</span>
+                                <span class="subtitle">选择刷入模式</span>
+                            </div>
+                        </div>
+                        <div class="flash-mode-options">
+                            <label class="flash-mode-option">
+                                <input type="radio" name="flash-mode" value="format" checked>
+                                <div class="option-content">
+                                    <div class="option-icon">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                        </svg>
+                                    </div>
+                                    <div class="option-details">
+                                        <div class="option-title">格式化刷入</div>
+                                        <div class="option-desc">清除所有数据</div>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="flash-mode-option">
+                                <input type="radio" name="flash-mode" value="keep-data">
+                                <div class="option-content">
+                                    <div class="option-icon">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                                        </svg>
+                                    </div>
+                                    <div class="option-details">
+                                        <div class="option-title">保留数据刷入</div>
+                                        <div class="option-desc">保留用户数据</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        <button id="flash-start-btn" class="hyper-btn btn-primary flash-btn" disabled>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                            </svg>
+                            <span>开始刷入</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fastboot检查界面（默认隐藏） -->
+            <div class="flash-container" id="fastboot-check-container" style="display: none;">
+                <div class="glass-card fastboot-check-card">
+                    <div class="panel-section-title">检查Fastboot状态</div>
+                    <div class="fastboot-status-content">
+                        <div class="fastboot-icon" id="fastboot-status-icon">
+                            <svg width="64" height="64" viewBox="0 0 50 50" fill="none">
+                                <circle cx="25" cy="25" r="20" fill="none" stroke="rgba(255, 107, 157, 0.15)" stroke-width="4"/>
+                                <circle cx="25" cy="25" r="20" fill="none" stroke="url(#fastbootSpinnerGradient)" stroke-width="4"
+                                        stroke-linecap="round" stroke-dasharray="80 30" class="spinner-circle"/>
+                                <defs>
+                                    <linearGradient id="fastbootSpinnerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#ff6b9d"/>
+                                        <stop offset="100%" style="stop-color:#c44569"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+                        <div class="fastboot-status-text" id="fastboot-status-text">正在检查 Fastboot 连接状态...</div>
+                        <div class="fastboot-tips">
+                            <p>✅ 请确保设备已进入 Fastboot 模式（显示 FASTBOOT 标志）</p>
+                            <p>✅ 关闭所有 ADB/Fastboot 命令行工具</p>
+                            <p>✅ 使用高质量 USB 数据线连接</p>
+                        </div>
+                    </div>
+                    <div class="fastboot-check-actions" id="fastboot-check-actions" style="display: none;">
+                        <button class="hyper-btn btn-primary" id="start-flash-from-fastboot-btn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                            </svg>
+                            <span>开始刷入</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 刷入进度界面（默认隐藏） -->
+            <div class="flash-container" id="flash-progress-container" style="display: none;">
+                <div class="flash-progress-wrapper">
+                    <!-- 进度卡片 -->
+                    <div class="glass-card flash-progress-card">
+                        <!-- 卡片头部 -->
+                        <div class="flash-progress-header">
+                            <div class="header-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                                </svg>
+                            </div>
+                            <div class="header-info">
+                                <div class="header-title">刷入进度</div>
+                                <div class="header-status" id="flash-progress-status">准备中...</div>
+                            </div>
+                            <div class="header-percent" id="flash-progress-percent">0%</div>
+                        </div>
+
+                        <!-- 主进度条 -->
+                        <div class="progress-section">
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="flash-progress-bar">
+                                    <div class="progress-bar-fill" id="flash-progress-fill"></div>
+                                    <div class="progress-bar-glow"></div>
+                                </div>
+                            </div>
+                            <div class="progress-task">
+                                <div class="task-icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                                    </svg>
+                                </div>
+                                <span id="flash-current-task">等待开始...</span>
+                            </div>
+                        </div>
+
+                        <!-- 统计卡片 -->
+                        <div class="stats-cards">
+                            <div class="stat-card stat-total">
+                                <div class="stat-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                        <line x1="16" y1="13" x2="8" y2="13"/>
+                                        <line x1="16" y1="17" x2="8" y2="17"/>
+                                        <polyline points="10 9 9 9 8 9"/>
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value" id="details-total">0</div>
+                                    <div class="stat-label">总命令</div>
+                                </div>
+                            </div>
+                            <div class="stat-card stat-success">
+                                <div class="stat-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value success" id="details-success">0</div>
+                                    <div class="stat-label">成功</div>
+                                </div>
+                            </div>
+                            <div class="stat-card stat-failed">
+                                <div class="stat-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <line x1="15" y1="9" x2="9" y2="15"/>
+                                        <line x1="9" y1="9" x2="15" y2="15"/>
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value error" id="details-failed">0</div>
+                                    <div class="stat-label">失败</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 详细日志区域 -->
+                        <div class="log-section">
+                            <div class="log-header" id="details-toggle">
+                                <div class="log-header-left">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6 9 12 15 18 9"/>
+                                    </svg>
+                                    <span>详细日志</span>
+                                </div>
+                            </div>
+                            <div class="log-content" id="flash-progress-details" style="display: none;">
+                                <div class="details-log" id="flash-progress-log"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 完成状态卡片 -->
+                    <div class="glass-card flash-complete-card" id="flash-progress-complete" style="display: none;">
+                        <div class="complete-visual">
+                            <!-- 完成动画图标 -->
+                            <div class="complete-icon-wrapper" id="complete-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+
+                            <!-- 成功标题 -->
+                            <div class="complete-title" id="complete-title">刷入成功</div>
+                            <div class="complete-summary" id="complete-summary"></div>
+
+                            <!-- 额外信息 -->
+                            <div class="complete-info">
+                                <div class="info-item">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                                    </svg>
+                                    <span>设备可以正常启动</span>
+                                </div>
+                                <div class="info-item">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                        <polyline points="22 4 12 14.01 9 11.01"/>
+                                    </svg>
+                                    <span>系统已刷入完成</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 按钮组 -->
+                        <div class="complete-actions">
+                            <a href="https://github.com/Luoxue520QwQ/mi-flash-web" target="_blank" class="hyper-btn btn-primary complete-btn">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+                                </svg>
+                                <span>访问项目仓库</span>
+                            </a>
+                            <button class="hyper-btn btn-secondary complete-btn" id="back-to-flash-btn">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                </svg>
+                                <span>返回首页</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 加载 fastboot 库
+        (function() {
+            var script = document.createElement('script');
+            script.src = 'js/android-fastboot.js';
+            script.async = false; // 改为同步加载，确保在 main.js 之前加载完成
+            document.head.appendChild(script);
+        })();
+    </script>
+    <script src="js/webadb.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
