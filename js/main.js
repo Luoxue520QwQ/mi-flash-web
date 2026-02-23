@@ -25,6 +25,7 @@ let imagePackageName = ''; // 刷机包名称（用于显示路径）
 let packageInfo = null;
 let imageFiles = [];
 let isFlashMode = false; // 是否在线刷模式
+let isFlashing = false; // 是否正在刷入
 let fastbootCheckInterval = null; // Fastboot检查定时器
 
 // 日志功能 - 输出到控制台
@@ -652,6 +653,29 @@ async function checkFastbootDevice(statusIcon, statusText) {
             return;
         }
 
+        // 如果正在刷入,隐藏检查页面,显示进度页面
+        if (isFlashing) {
+            const fastbootCheckContainer = document.getElementById('fastboot-check-container');
+            const progressContainer = document.getElementById('flash-progress-container');
+
+            if (fastbootCheckContainer && fastbootCheckContainer.style.display !== 'none') {
+                fastbootCheckContainer.style.display = 'none';
+                progressContainer.style.display = 'block';
+
+                const appTitle = document.getElementById('app-title');
+                if (appTitle) {
+                    appTitle.textContent = '刷入进度';
+                }
+
+                log('检测到正在刷入,自动切换到进度页面', 'info');
+            }
+
+            // 停止定时器
+            clearInterval(fastbootCheckInterval);
+            fastbootCheckInterval = null;
+            return;
+        }
+
         // 只在第一次检查时输出日志
         if (!fastbootDevice) {
             log('正在检查 Fastboot 连接...', 'info');
@@ -1204,6 +1228,9 @@ async function executeFlashProcess() {
 
 // Fastboot 检查成功后，用户点击开始按钮执行刷写
 async function startFlashFromFastboot() {
+    // 设置正在刷入标志
+    isFlashing = true;
+
     // 立即隐藏 Fastboot 检查容器,显示进度容器
     const fastbootCheckContainer = document.getElementById('fastboot-check-container');
     const progressContainer = document.getElementById('flash-progress-container');
@@ -1591,6 +1618,11 @@ async function executeBatCommands(batContent, fb) {
 
     // 显示完成状态
     showFlashProgressComplete(successCount, failCount);
+
+    // 重置刷入标志
+    isFlashing = false;
+}
+    showFlashProgressComplete(successCount, failCount);
 }
 
 // 读取镜像文件
@@ -1813,4 +1845,7 @@ function returnToFlashAfterProgress() {
     if (logContent) {
         logContent.innerHTML = '';
     }
+
+    // 重置刷入标志
+    isFlashing = false;
 }
