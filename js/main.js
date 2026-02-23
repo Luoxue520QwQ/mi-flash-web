@@ -1622,8 +1622,6 @@ async function executeBatCommands(batContent, fb) {
     // 重置刷入标志
     isFlashing = false;
 }
-    showFlashProgressComplete(successCount, failCount);
-}
 
 // 读取镜像文件
 async function readImageFile(fileName) {
