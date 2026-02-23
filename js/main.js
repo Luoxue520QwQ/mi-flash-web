@@ -620,6 +620,11 @@ function showFastbootCheckCard() {
     const fastbootCheckContainer = document.getElementById('fastboot-check-container');
     const appTitle = document.getElementById('app-title');
 
+    log('[DEBUG] showFastbootCheckCard 被调用', 'info');
+    log('[DEBUG] flashContainer display:', flashContainer?.style.display, 'info');
+    log('[DEBUG] fastbootCheckContainer display:', fastbootCheckContainer?.style.display, 'info');
+    log('[DEBUG] isFlashing:', isFlashing, 'info');
+
     // 使用页面切换动画
     animatePageTransition(flashContainer, fastbootCheckContainer, 'forward');
 
@@ -648,31 +653,46 @@ async function startFastbootCheck() {
 // 检查Fastboot设备
 async function checkFastbootDevice(statusIcon, statusText) {
     try {
-        // 如果定时器已被清除,直接返回
-        if (!fastbootCheckInterval) {
+        // 如果正在刷入,立即停止定时器,隐藏检查页面并返回
+        if (isFlashing) {
+            log('检测到正在刷入状态,停止 Fastboot 检查', 'info');
+
+            // 停止定时器
+            if (fastbootCheckInterval) {
+                clearInterval(fastbootCheckInterval);
+                fastbootCheckInterval = null;
+            }
+
+            // 确保隐藏 Fastboot 检查页面,显示进度页面
+            const fastbootCheckContainer = document.getElementById('fastboot-check-container');
+            const progressContainer = document.getElementById('flash-progress-container');
+            const appTitle = document.getElementById('app-title');
+
+            if (fastbootCheckContainer) {
+                const display = window.getComputedStyle(fastbootCheckContainer).display;
+                if (display !== 'none') {
+                    fastbootCheckContainer.style.display = 'none';
+                    log('已隐藏 Fastboot 检查页面', 'info');
+                }
+            }
+
+            if (progressContainer) {
+                const display = window.getComputedStyle(progressContainer).display;
+                if (display === 'none') {
+                    progressContainer.style.display = 'block';
+                    log('已显示刷入进度页面', 'info');
+                }
+            }
+
+            if (appTitle) {
+                appTitle.textContent = '刷入进度';
+            }
+
             return;
         }
 
-        // 如果正在刷入,隐藏检查页面,显示进度页面
-        if (isFlashing) {
-            const fastbootCheckContainer = document.getElementById('fastboot-check-container');
-            const progressContainer = document.getElementById('flash-progress-container');
-
-            if (fastbootCheckContainer && fastbootCheckContainer.style.display !== 'none') {
-                fastbootCheckContainer.style.display = 'none';
-                progressContainer.style.display = 'block';
-
-                const appTitle = document.getElementById('app-title');
-                if (appTitle) {
-                    appTitle.textContent = '刷入进度';
-                }
-
-                log('检测到正在刷入,自动切换到进度页面', 'info');
-            }
-
-            // 停止定时器
-            clearInterval(fastbootCheckInterval);
-            fastbootCheckInterval = null;
+        // 如果定时器已被清除,直接返回
+        if (!fastbootCheckInterval) {
             return;
         }
 
@@ -787,9 +807,22 @@ async function checkFastbootDevice(statusIcon, statusText) {
                         updateActionButtons(true);
                         updateConnectionStatus(true);
 
-                        // 停止检查
+                        // 立即设置刷入标志，防止其他定时器回调执行
+                        isFlashing = true;
+
+                        // 立即停止检查定时器
                         clearInterval(fastbootCheckInterval);
                         fastbootCheckInterval = null;
+
+                        // 立即隐藏 Fastboot 检查页面
+                        const fastbootCheckContainer = document.getElementById('fastboot-check-container');
+                        if (fastbootCheckContainer) {
+                            const display = window.getComputedStyle(fastbootCheckContainer).display;
+                            if (display !== 'none') {
+                                fastbootCheckContainer.style.display = 'none';
+                                log('已隐藏 Fastboot 检查页面', 'info');
+                            }
+                        }
 
                         // 连接成功后直接开始刷入
                         log('Fastboot 连接成功，准备开始刷入...', 'success');
@@ -804,8 +837,22 @@ async function checkFastbootDevice(statusIcon, statusText) {
                         updateActionButtons(true);
                         updateConnectionStatus(true);
 
+                        // 立即设置刷入标志，防止其他定时器回调执行
+                        isFlashing = true;
+
+                        // 立即停止检查定时器
                         clearInterval(fastbootCheckInterval);
                         fastbootCheckInterval = null;
+
+                        // 立即隐藏 Fastboot 检查页面
+                        const fastbootCheckContainer = document.getElementById('fastboot-check-container');
+                        if (fastbootCheckContainer) {
+                            const display = window.getComputedStyle(fastbootCheckContainer).display;
+                            if (display !== 'none') {
+                                fastbootCheckContainer.style.display = 'none';
+                                log('已隐藏 Fastboot 检查页面', 'info');
+                            }
+                        }
 
                         // 连接成功后直接开始刷入
                         log('Fastboot 连接成功，准备开始刷入...', 'success');
@@ -844,8 +891,13 @@ async function checkFastbootDevice(statusIcon, statusText) {
                 if (requestedDevice) {
                     log(`用户选择了设备: ${requestedDevice.productName || '未知'}`, 'success');
                     // 设备已授权,下一次检查应该能找到
-                    // 立即执行一次检查
+                    // 立即执行一次检查（检查 isFlashing 状态）
                     setTimeout(() => {
+                        // 检查是否已经开始刷写，如果是则不执行
+                        if (isFlashing) {
+                            log('检测到正在刷入，跳过设备检查', 'info');
+                            return;
+                        }
                         checkFastbootDevice(statusIcon, statusText);
                     }, 500);
                 }
@@ -1183,14 +1235,11 @@ async function startFlash() {
             log('已连接 ADB，正在重启到 Fastboot...', 'info');
             await adbDevice.reboot('bootloader');
             statusEl.className = 'flash-confirm-status success';
-            statusText.textContent = '✓ 已发送重启命令，请等待设备进入 Fastboot 模式';
+            statusText.textContent = '✓ 已发送重启命令，正在进入 Fastboot 状态检查...';
+            continueBtn.disabled = true;
 
-            // 等待 2 秒后启用继续按钮
-            setTimeout(() => {
-                continueBtn.disabled = false;
-                statusEl.className = 'flash-confirm-status success';
-                statusText.textContent = '设备正在重启到 Fastboot...';
-            }, 2000);
+            // ADB 重启命令发送成功后，自动进入 Fastboot 状态检查页面
+            await executeFlashProcess();
 
         } else {
             // 未连接 ADB，提示手动重启
@@ -1216,9 +1265,11 @@ async function executeFlashProcess() {
     // 进入 Fastboot 检查页面
     const flashContainer = document.getElementById('flash-container');
     const fastbootCheckContainer = document.getElementById('fastboot-check-container');
+    const progressContainer = document.getElementById('flash-progress-container');
     const appTitle = document.getElementById('app-title');
 
     flashContainer.style.display = 'none';
+    progressContainer.style.display = 'none';  // 确保进度页面是隐藏的
     fastbootCheckContainer.style.display = 'block';
     appTitle.textContent = '检查 Fastboot 连接';
 
@@ -1228,21 +1279,40 @@ async function executeFlashProcess() {
 
 // Fastboot 检查成功后，用户点击开始按钮执行刷写
 async function startFlashFromFastboot() {
-    // 设置正在刷入标志
+    // 立即设置正在刷入标志 - 必须在所有操作之前
     isFlashing = true;
 
-    // 立即隐藏 Fastboot 检查容器,显示进度容器
+    // 立即停止定时器,防止重复执行
+    if (fastbootCheckInterval) {
+        clearInterval(fastbootCheckInterval);
+        fastbootCheckInterval = null;
+        log('已停止 Fastboot 检查定时器', 'info');
+    }
+
+    // 确保隐藏 Fastboot 检查容器,显示进度容器（双重保险）
     const fastbootCheckContainer = document.getElementById('fastboot-check-container');
     const progressContainer = document.getElementById('flash-progress-container');
     const appTitle = document.getElementById('app-title');
 
+    // 强制隐藏 Fastboot 检查容器
     if (fastbootCheckContainer) {
-        fastbootCheckContainer.style.display = 'none';
+        const display = window.getComputedStyle(fastbootCheckContainer).display;
+        if (display !== 'none') {
+            fastbootCheckContainer.style.display = 'none';
+            log('已隐藏 Fastboot 检查页面', 'info');
+        }
     }
+
+    // 强制显示进度容器
     if (progressContainer) {
-        progressContainer.style.display = 'block';
+        const display = window.getComputedStyle(progressContainer).display;
+        if (display === 'none') {
+            progressContainer.style.display = 'block';
+            log('已显示刷入进度页面', 'info');
+        }
     }
-    if (appTitle) {
+
+    if (appTitle && appTitle.textContent !== '刷入进度') {
         appTitle.textContent = '刷入进度';
     }
 
@@ -1363,6 +1433,9 @@ async function readBatFile(batFileName) {
 
 // 解析并执行 bat 文件中的命令
 async function executeBatCommands(batContent, fb) {
+    // 确保设置刷入标志（双重保险）
+    isFlashing = true;
+
     log('[调试] executeBatCommands 开始执行', 'info');
 
     const lines = batContent.split('\n');
@@ -1758,6 +1831,8 @@ function showFlashProgressComplete(successCount, failCount) {
     const completeSection = document.getElementById('flash-progress-complete');
     const completeTitle = document.getElementById('complete-title');
     const completeSummary = document.getElementById('complete-summary');
+    const successCheckmark = document.querySelector('.success-checkmark');
+    const infoIcons = document.querySelectorAll('.info-icon');
 
     // 隐藏进度卡片,显示完成卡片
     if (progressCard) {
@@ -1767,13 +1842,49 @@ function showFlashProgressComplete(successCount, failCount) {
     // 设置标题和状态
     if (failCount > 0) {
         completeTitle.textContent = '刷入失败';
-        completeTitle.style.color = '#ff6b9d';
+        completeTitle.style.background = 'linear-gradient(135deg, #ff6b9d 0%, #ff9f43 100%)';
+        completeTitle.style.webkitBackgroundClip = 'text';
+        completeTitle.style.webkitTextFillColor = 'transparent';
+        completeTitle.style.backgroundClip = 'text';
+
+        // 失败时改变图标颜色
+        if (successCheckmark) {
+            successCheckmark.style.background = 'linear-gradient(135deg, #ff6b9d 0%, #ff9f43 100%)';
+        }
+
+        // 失败时改变信息图标样式
+        infoIcons.forEach(icon => {
+            icon.className = 'info-icon error';
+        });
     } else {
         completeTitle.textContent = '刷入成功';
-        completeTitle.style.color = 'var(--text-primary)';
+        completeTitle.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        completeTitle.style.webkitBackgroundClip = 'text';
+        completeTitle.style.webkitTextFillColor = 'transparent';
+        completeTitle.style.backgroundClip = 'text';
+
+        // 成功时恢复图标颜色
+        if (successCheckmark) {
+            successCheckmark.style.background = 'linear-gradient(135deg, #4ec9b0 0%, #4fc1ff 100%)';
+        }
+
+        // 成功时恢复信息图标样式
+        infoIcons.forEach(icon => {
+            icon.className = 'info-icon success';
+        });
     }
 
-    completeSummary.textContent = `成功 ${successCount} 个命令${failCount > 0 ? `，失败 ${failCount} 个` : ''}`;
+    const modeInput = document.querySelector('input[name="flash-mode"]:checked');
+    let modeText = '';
+    if (modeInput) {
+        modeText = modeInput.value === 'format' ? '格式化刷入' : '保留数据刷入';
+    }
+    const deviceName = packageInfo && packageInfo.device && packageInfo.device !== '未知'
+        ? packageInfo.device
+        : '未知机型';
+    const baseSummary = `机型 ${deviceName}${modeText ? ` · ${modeText}` : ''}`;
+    const commandSummary = `成功 ${successCount} 个命令${failCount > 0 ? `，失败 ${failCount} 个` : ''}`;
+    completeSummary.textContent = `${baseSummary} · ${commandSummary}`;
     completeSection.style.display = 'block';
 }
 

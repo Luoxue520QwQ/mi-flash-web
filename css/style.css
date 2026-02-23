@@ -2395,7 +2395,8 @@ main {
 }
 
 /* 完成状态卡片 */
-.flash-progress-complete {
+.flash-progress-complete,
+.flash-complete-card {
     text-align: center;
     padding: 60px 40px;
 }
@@ -2406,72 +2407,99 @@ main {
     text-align: center;
 }
 
-.complete-icon-wrapper {
-    width: 100px;
-    height: 100px;
+/* 成功动画 */
+.success-animation {
+    width: 120px;
+    height: 120px;
     margin: 0 auto 24px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #4ec9b0 0%, #4fc1ff 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    animation: completeScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 10px 40px rgba(78, 201, 176, 0.4),
-                0 0 0 4px rgba(78, 201, 176, 0.1);
     position: relative;
 }
 
-.complete-icon-wrapper::before {
-    content: '';
+.success-animation::before {
+    content: "";
     position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 50% 30%, rgba(78, 201, 176, 0.45) 0%, transparent 55%),
+        radial-gradient(circle at 50% 70%, rgba(79, 193, 255, 0.35) 0%, transparent 60%);
+    filter: blur(10px);
+    opacity: 0;
+    transform: scale(0.8);
+    animation: successGlow 1.2s ease-out forwards;
+}
+
+.success-checkmark {
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    border: 2px solid rgba(78, 201, 176, 0.2);
-    animation: completePulse 2s ease-in-out infinite;
+    display: block;
+    stroke-width: 2;
+    stroke: #fff;
+    stroke-miterlimit: 10;
+    box-shadow: inset 0px 0px 0px 7px rgba(0, 0, 0, 0.1);
+    animation: fill 0.4s ease-in-out 0.4s forwards,
+               scale 0.3s ease-in-out 0.9s both;
+    background: linear-gradient(135deg, #4ec9b0 0%, #4fc1ff 100%);
+    position: relative;
+    z-index: 1;
 }
 
-@keyframes completePulse {
+.success-checkmark__circle {
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    stroke-width: 2;
+    stroke-miterlimit: 10;
+    stroke: #fff;
+    animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.success-checkmark__check {
+    transform-origin: 50% 50%;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+}
+
+@keyframes stroke {
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes scale {
     0%, 100% {
-        transform: scale(1);
-        opacity: 0.5;
+        transform: none;
     }
     50% {
-        transform: scale(1.1);
-        opacity: 0;
+        transform: scale3d(1.1, 1.1, 1);
     }
 }
 
-.complete-icon-wrapper svg {
-    width: 52px;
-    height: 52px;
-    stroke-width: 3;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+@keyframes fill {
+    100% {
+        box-shadow: inset 0px 0px 0px 50px rgba(78, 201, 176, 0);
+    }
 }
 
-@keyframes completeScale {
+@keyframes successGlow {
     0% {
-        transform: scale(0) rotate(-180deg);
         opacity: 0;
+        transform: scale(0.7);
     }
-    50% {
-        transform: scale(1.15) rotate(0deg);
+    60% {
+        opacity: 1;
+        transform: scale(1.05);
     }
     100% {
-        transform: scale(1) rotate(0deg);
-        opacity: 1;
+        opacity: 0.8;
+        transform: scale(1);
     }
 }
 
-.complete-icon-wrapper.error {
-    background: linear-gradient(135deg, #ff6b9d 0%, #ff9f43 100%);
-    box-shadow: 0 10px 40px rgba(255, 107, 157, 0.4),
-                0 0 0 4px rgba(255, 107, 157, 0.1);
-}
-
-.complete-icon-wrapper.error::before {
-    border-color: rgba(255, 107, 157, 0.2);
+/* 完成内容区 */
+.complete-content {
+    text-align: center;
 }
 
 .complete-title {
@@ -2483,17 +2511,41 @@ main {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    animation: titleFadeIn 0.6s ease-out;
+}
+
+@keyframes titleFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .complete-summary {
     font-size: 16px;
     color: var(--text-secondary);
-    margin-bottom: 24px;
-    padding: 12px 20px;
+    margin-bottom: 32px;
+    padding: 12px 24px;
     background: var(--bg-card-light);
     border-radius: 12px;
     border: 1px solid var(--border-color);
     display: inline-block;
+    animation: summaryFadeIn 0.6s ease-out 0.2s both;
+}
+
+@keyframes summaryFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* 完成状态额外信息 */
@@ -2508,18 +2560,68 @@ main {
 .info-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
+    gap: 12px;
+    padding: 14px 20px;
     background: rgba(78, 201, 176, 0.08);
-    border-radius: 10px;
+    border-radius: 12px;
     color: var(--text-secondary);
     font-size: 14px;
     border: 1px solid rgba(78, 201, 176, 0.15);
+    animation: infoSlideIn 0.5s ease-out forwards;
+    opacity: 0;
+    transform: translateX(-20px);
 }
 
-.info-item svg {
-    color: #4ec9b0;
+.info-item:nth-child(1) {
+    animation-delay: 0.3s;
+}
+
+.info-item:nth-child(2) {
+    animation-delay: 0.4s;
+}
+
+@keyframes infoSlideIn {
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.info-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
+}
+
+.info-icon.success {
+    background: linear-gradient(135deg, rgba(78, 201, 176, 0.15) 0%, rgba(79, 193, 255, 0.15) 100%);
+    color: #4ec9b0;
+}
+
+.info-icon.error {
+    background: linear-gradient(135deg, rgba(255, 107, 157, 0.15) 0%, rgba(255, 159, 67, 0.15) 100%);
+    color: #ff6b9d;
+}
+
+.info-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.info-icon.success,
+.info-icon.error {
+    box-shadow: 0 0 12px rgba(78, 201, 176, 0.25);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.info-item:hover .info-icon.success,
+.info-item:hover .info-icon.error {
+    transform: translateY(-1px) scale(1.05);
+    box-shadow: 0 6px 18px rgba(78, 201, 176, 0.35);
 }
 
 /* 完成状态按钮组 */
