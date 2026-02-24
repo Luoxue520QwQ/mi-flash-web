@@ -1041,6 +1041,7 @@ function showFlashPackageInfo(info) {
 // 显示镜像文件列表
 function showFlashImageList(files) {
     const imageList = document.getElementById('flash-image-list');
+    const imageCountEl = document.getElementById('flash-image-count');
     
     const html = `
         <div class="image-list-content">
@@ -1062,6 +1063,10 @@ function showFlashImageList(files) {
     
     imageList.innerHTML = html;
     log(`找到 ${files.length} 个镜像文件`, 'info');
+
+    if (imageCountEl) {
+        imageCountEl.textContent = `${files.length} 个文件`;
+    }
 }
 
 // 格式化文件大小
@@ -1167,14 +1172,24 @@ async function scanImagesFolder(folderHandle) {
         imageFiles.sort((a, b) => a.name.localeCompare(b.name));
         showFlashImageList(imageFiles);
     } else {
-        document.getElementById('flash-image-list').innerHTML = `
-            <div class="empty-state">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                </svg>
-                <p>未找到镜像文件</p>
-            </div>
-        `;
+        const imageList = document.getElementById('flash-image-list');
+        const imageCountEl = document.getElementById('flash-image-count');
+
+        if (imageList) {
+            imageList.innerHTML = `
+                <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <p>未找到镜像文件</p>
+                </div>
+            `;
+        }
+
+        if (imageCountEl) {
+            imageCountEl.textContent = '0 个文件';
+        }
+
         log('未找到镜像文件', 'warning');
     }
 }
