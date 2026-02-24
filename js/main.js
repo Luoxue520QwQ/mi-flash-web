@@ -63,7 +63,11 @@ function animatePageTransition(fromElement, toElement, direction = 'forward') {
         fromElement.classList.remove(exitClass);
 
         // 显示并添加进入动画
-        toElement.style.display = 'block';
+        if (toElement.id === 'main-grid') {
+            toElement.style.display = 'grid';
+        } else {
+            toElement.style.display = 'block';
+        }
         toElement.classList.add(enterClass);
 
         // 动画结束后清理
